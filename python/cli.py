@@ -11,7 +11,7 @@ __client = bluepipe.from_config_file()
 
 
 def print_usage():
-    print(f'Usage: {sys.argv[0]} -j <job id> -t <table> -c <cursor> -d <done>')
+    print(f'Usage: {sys.argv[0]} -j <job> -t <table> -c <cursor> -d <done>')
     sys.exit(1)
 
 
@@ -55,8 +55,6 @@ if __name__ == "__main__":
 
     try:
         command = parse_command(sys.argv[1:])
-        print(command)
-
         if not ('job' in command) or not ('table' in command):
             print_usage()
 

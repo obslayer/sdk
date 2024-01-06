@@ -3,7 +3,9 @@
 import json
 import time
 from os.path import join, dirname
+import sys
 from sys import argv
+from urllib.request import Request, urlopen, URLError
 
 
 def __load_config():
@@ -89,9 +91,29 @@ class Bluepipe:
         self.__http_call('POST', '/instance/{}/stop'.format(instance))
 
     def __http_call(self, method, prefix, payload=None):
-        if payload:
-            json.dumps(payload)
 
-    #  r = requests.get(self.__endpoint)
-    #  if r.status_code % 100 == 4:
-    #      return
+        if payload:
+            payload = json.dumps(payload).encode('utf-8')
+
+        req = Request(
+            self.__endpoint + prefix,
+            payload,
+            {},
+            None,
+            False,
+            method
+        )
+
+        req.add_header('User-Agent', 'cli-py/1.0 ({})'.format(sys.version))
+        req.add_header('Content-Type', 'application/json')
+        if payload:
+            req.add_header('Content-Length', len(payload))
+
+        # TODO: nonce防止回放攻击
+
+        try:
+            resp = urlopen(req, None, 10)
+            print(resp)
+        except URLError as error:
+            print(error)
+            return None
