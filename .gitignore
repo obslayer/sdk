@@ -2,6 +2,7 @@
 .swp
 .tmp
 .log
+.pyc
 logs
 data
 temp
