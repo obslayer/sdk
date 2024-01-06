@@ -1,11 +1,15 @@
 # coding=UTF-8
 
+import base64
+import hmac
 import json
 import time
+from hashlib import sha1
 from os.path import join, dirname
-import sys
 from sys import argv
 from urllib.request import Request, urlopen, URLError
+
+__version__ = 'cli-py/0.1.0'
 
 
 def __load_config():
@@ -90,10 +94,19 @@ class Bluepipe:
     def kill(self, instance):
         self.__http_call('POST', '/instance/{}/stop'.format(instance))
 
+    def __signature(self, value):
+        token = hmac.new(self.__accessKey.encode('utf-8'), value.encode('utf-8'), sha1)
+        return base64.b64encode(token.digest()).decode('utf-8').rstrip('\n')
+
     def __http_call(self, method, prefix, payload=None):
 
         if payload:
             payload = json.dumps(payload).encode('utf-8')
+
+        # TODO: nonce防止回放攻击
+        queries = {
+            'Nonce': time.time(),
+        }
 
         req = Request(
             self.__endpoint + prefix,
@@ -104,12 +117,16 @@ class Bluepipe:
             method
         )
 
-        req.add_header('User-Agent', 'cli-py/1.0 ({})'.format(sys.version))
+        # -- Sun, 22 Nov 2015 08:16:38 GMT
+        req.add_header('Date', time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime()))
+        req.add_header('User-Agent', __version__)
         req.add_header('Content-Type', 'application/json')
         if payload:
             req.add_header('Content-Length', len(payload))
 
-        # TODO: nonce防止回放攻击
+        req.add_header('Authorization', 'AKEY {}:{}'.format(
+            self.__accessId, self.__signature('')))
+        print(req.headers)
 
         try:
             resp = urlopen(req, None, 10)
