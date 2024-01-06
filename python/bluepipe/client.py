@@ -1,8 +1,7 @@
 # coding=UTF-8
 
 import json
-import requests
-
+# import requests
 
 class HttpClient:
     __endpoint = ""
@@ -18,9 +17,9 @@ class HttpClient:
         if payload:
             json.dumps(payload)
 
-        r = requests.get(self.__endpoint)
-        if r.status_code % 100 == 4:
-            return
+      #  r = requests.get(self.__endpoint)
+      #  if r.status_code % 100 == 4:
+      #      return
 
     def submit(self, job_id, table, offset, done_mark):
         self.__http_call('POST', '/job/%s/start', {

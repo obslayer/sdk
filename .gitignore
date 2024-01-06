@@ -3,6 +3,7 @@
 .tmp
 .log
 .pyc
+__*
 logs
 data
 temp
