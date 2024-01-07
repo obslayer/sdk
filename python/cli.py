@@ -12,6 +12,7 @@
 """
 
 import argparse
+import logging
 import signal
 import sys
 import time
@@ -20,10 +21,15 @@ from lib import bluepipe
 
 __client = bluepipe.from_config_file()
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] %(levelname)s: %(message)s'
+)
+
 
 def signal_handler(signum, frame):
     signame = signal.Signals(signum).name
-    print(f'Got signal {signame} ({signum}), killing instances ...')
+    logging.critical('Got signal %s (%d), killing instances ...', signame, signum)
     __client.shutdown()
     sys.exit(128 + signum)
 
@@ -61,7 +67,6 @@ if __name__ == "__main__":
         resp = __client.submit(config.get('job'), config.get('table'),
                                offset, offset + 86460)
         if not resp:
-            # print log
             sys.exit(2)
 
         signal.signal(signal.SIGTERM, signal_handler)
@@ -71,6 +76,6 @@ if __name__ == "__main__":
             sys.exit(3)
 
     except Exception as error:
-        print(error)
+        logging.critical('%s', error)
         parser.print_usage()
         sys.exit(1)

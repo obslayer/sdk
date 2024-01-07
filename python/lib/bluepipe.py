@@ -3,11 +3,11 @@
 import base64
 import hmac
 import json
+import logging
 import time
 from hashlib import sha1
 from os.path import join, dirname
 from sys import argv
-
 from vendors import requests
 
 __version__ = 'cli-py/0.1.0'
@@ -85,6 +85,7 @@ class Bluepipe:
 
     __req_timeout = 10
 
+    __logger = logging.getLogger(__name__)
     # 正在运行的instances
     __instances = []
 
@@ -105,10 +106,11 @@ class Bluepipe:
         """
         expire = time.time() + timeout
         while len(self.__instances) > 0:
-            print(self.__instances)
             for x in self.__instances:
-                resp = self.get_status(x)
-                if resp and resp.get('last_status', '') in ['FINISHED', 'KILLED', 'FAILED']:
+                metric = self.get_status(x) or {}
+                status = metric.get('last_status', 'unknown').upper()
+                self.__logger.info('instance (%s) status: %s', x, status)
+                if status in ['FINISHED', 'KILLED', 'FAILED']:
                     self.__instances.remove(x)
 
             if len(self.__instances) > 0:
@@ -135,10 +137,14 @@ class Bluepipe:
         # [{jobId: ***, instanceId:}]
         if resp.success():
             for x in (resp.data() or []):
-                if x and job_id == x.get('jobId', ''):
-                    id = x.get('instanceId', '')
-                    if id and len(id) > 0:
-                        self.__instances.append(id)
+                if not x:
+                    continue
+
+                instance = x.get('instanceId', '')
+                # logview = x.get('logview', '')
+                if len(instance) > 0:
+                    self.__instances.append(instance)
+                    self.__logger.info('Submit job ok, instance=%s', instance)
 
             return resp.data()
 
