@@ -3,7 +3,7 @@
 .tmp
 .log
 .pyc
-__*
+__pycache__
 logs
 data
 temp
