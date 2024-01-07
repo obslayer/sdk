@@ -1,27 +1,24 @@
 #!/usr/bin/env python3
 # coding=UTF-8
 
-import getopt
+"""
+实现：
+1. 系统级配置 bluepipe.conf
+2. 命令级入参 job、table（业务参数）和date（调度参数）
+3. 监听SIGTERM和SIGINT杀作业，否则等待作业完成(0/非零)
+
+待办：
+1. 日志怎么打印？
+"""
+
+import argparse
 import signal
 import sys
+import time
 
 from lib import bluepipe
 
 __client = bluepipe.from_config_file()
-
-"""
-注意这里的‘${dt}’, 会被自动替换成日期，格式为YYYYMMDD, 如20231228.
-这个日期的逻辑为：
-● 我们配置了每天0点10分调度，比如12月28日的0点10分会生成一个实例
-● 因为数据偏移量为0, 所以2月28日0点10分生成实例的数据时间为2月28日0点0分， 如果偏移量为-1, 那么2月28日0点10分生成实例的数据时间为2月27日0点0分
-● ‘${dt}‘的值等于数据时间
-● ‘${dt}‘支持表达式，如‘${dt-1d}‘
-"""
-
-
-def print_usage():
-    print(f'Usage: {sys.argv[0]} -j <job> -t <table> -d <date>')
-    sys.exit(1)
 
 
 def signal_handler(signum, frame):
@@ -31,51 +28,46 @@ def signal_handler(signum, frame):
     sys.exit(128 + signum)
 
 
-# TODO: 根据调度系统传入的参数转换
 def to_unix_epoch(value):
-    if value.isdigit():
-        return int(value)
-
-    return -1
-
-
-def parse_command(arguments):
-    options, args = getopt.getopt(arguments,
-                                  'j:t:c:d:',
-                                  ['job=',
-                                   'table=',
-                                   'cursor=',
-                                   'done='])
-    output = {}
-    for opt, arg in options:
-        if opt in ['-j', '--job']:
-            output['job'] = arg
-        elif opt in ['-t', '--table']:
-            output['table'] = arg.replace('.', '/')
-        elif opt in ['-c', '--cursor']:
-            output['cursor'] = to_unix_epoch(arg)
-        elif opt in ['-d', '--done']:
-            output['done'] = to_unix_epoch(arg)
-
-    return output
+    # Z
+    return int(time.strftime('%s', time.strptime(value, '%Y%m%d')))
 
 
 if __name__ == "__main__":
 
-    try:
-        command = parse_command(sys.argv[1:])
-        if ('job' not in command) or ('table' not in command):
-            print_usage()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-j', '--job',
+                        dest='job',
+                        help='bluepipe作业ID',
+                        required=True)
 
-        __client.submit(command.get('job'),
-                        command.get('table'),
-                        command.get('cursor', -1),
-                        command.get('done', -1))
+    parser.add_argument('-t', '--table',
+                        dest='table',
+                        help='bluepipe来源表名',
+                        required=True)
+
+    parser.add_argument('-d', '--date',
+                        dest='date',
+                        # 暂时只支持daily run
+                        help='数据日期，以本地时间YYYYMMDD表示',
+                        required=False,
+                        default=time.strftime('%Y%m%d', time.localtime(time.time() - 86400))
+                        )
+
+    try:
+        config = vars(parser.parse_args())
+        offset = to_unix_epoch(config.get('date'))
+
+        __client.submit(config.get('job'), config.get('table'),
+                        offset, offset + 86460)
 
         signal.signal(signal.SIGTERM, signal_handler)
         signal.signal(signal.SIGINT, signal_handler)
 
-        __client.wait_finished(0)
+        if not __client.wait_finished(0):
+            sys.exit(2)
 
-    except getopt.GetoptError:
-        print_usage()
+    except Exception as error:
+        print(error)
+        parser.print_usage()
+        sys.exit(1)

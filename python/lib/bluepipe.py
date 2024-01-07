@@ -32,7 +32,7 @@ def __load_config():
                         pair = x.split('=')
                         output[pair[0].strip()] = pair[1].strip()
                 return output
-        except OSError:
+        except Exception:
             continue
 
     return {}
@@ -65,6 +65,11 @@ class Bluepipe:
             self.kill(x)
 
     def wait_finished(self, timeout=0):
+        """
+        等待作业完成退出
+        :param timeout: 最长等待时间（秒），0代表不限制
+        :return: Boolean. True代表正常结束
+        """
         expire = time.time() + timeout
         while len(self.__instances) > 0:
             for x in self.__instances:
