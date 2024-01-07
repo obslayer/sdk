@@ -9,6 +9,7 @@ from hashlib import sha1
 from os.path import join, dirname
 from sys import argv
 from urllib.parse import urlparse, parse_qs, quote_plus
+
 from vendors import requests as http
 
 __version__ = 'cli-py/0.1.0'
@@ -122,17 +123,16 @@ class Bluepipe:
 
         return True
 
-    def submit(self, job_id, table, offset, done_mark):
+    def submit(self, job_id, table, cursor_value_in_ms: int, timely_threshold: int):
         resp = self.__http_call('POST', f'/job/{job_id}/start', {
             'tables': table,
 
-            # epoch of read / scan cursor
-            'offset': offset,
+            # 以毫秒计, 如果未配置游标列，则不参与过滤
+            'offset': cursor_value_in_ms,
 
-            # epoch to determine if the data is ready
             # 对于CDC作业来讲，commit时间必须大于此值
             # 注意：如果来源库有异步复制（slave replicate），其复制进度也应该超过此阈值
-            'threshold': done_mark
+            'timely': timely_threshold
         })
 
         # [{jobId: ***, instanceId:}]

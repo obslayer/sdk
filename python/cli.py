@@ -60,10 +60,10 @@ if __name__ == "__main__":
 
     try:
         config = vars(parser.parse_args())
-        offset = to_unix_epoch(config.get('date'))
+        offset = 1000 * to_unix_epoch(config.get('date'))
 
         resp = __client.submit(config.get('job'), config.get('table'),
-                               offset, offset + 86460)
+                               offset, offset + 86460000)
         if not resp:
             sys.exit(2)
 
