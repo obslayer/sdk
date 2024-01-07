@@ -1,0 +1,50 @@
+name: "release"
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+env:
+  RELEASE_NAME: ${{ github.ref_name }}
+
+jobs:
+  pre-release:
+    name: "Release"
+    runs-on: "ubuntu-latest"
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: Tag Release
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: "latest"
+          prerelease: false
+          title: ${{ env.RELEASE_NAME }}
+          files: |
+            *.tar.gz
+
+      - name: Nightly Build
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: "nightly"
+          prerelease: true
+          title: Nightly Build (${{ env.RELEASE_NAME }})
+          files: |
+            *.tar.gz

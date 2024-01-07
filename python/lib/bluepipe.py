@@ -152,6 +152,7 @@ class Bluepipe:
         return None
 
     def get_status(self, instance):
+        instance = quote_plus(instance)
         resp = self.__http_call('GET', f'/instance/{instance}/status')
         if resp.success():
             return resp.data()
@@ -159,6 +160,7 @@ class Bluepipe:
         return None
 
     def kill_instance(self, instance):
+        instance = quote_plus(instance)
         resp = self.__http_call('POST', f'/instance/{instance}/stop')
         if resp.success():
             return resp.data()
