@@ -108,13 +108,8 @@ class Bluepipe:
             print(self.__instances)
             for x in self.__instances:
                 resp = self.get_status(x)
-                print(resp)
-
-                if resp in ['FINISHED', 'KILLED', 'FAILED']:
-                    try:
-                        self.__instances.remove('')
-                    except ValueError:
-                        continue
+                if resp and resp.get('last_status', '') in ['FINISHED', 'KILLED', 'FAILED']:
+                    self.__instances.remove(x)
 
             if len(self.__instances) > 0:
                 if timeout > 0 and time.time() >= expire:
