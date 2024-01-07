@@ -466,7 +466,11 @@ def dict_from_cookiejar(cj):
     :rtype: dict
     """
 
-    cookie_dict = {cookie.name: cookie.value for cookie in cj}
+    cookie_dict = {}
+
+    for cookie in cj:
+        cookie_dict[cookie.name] = cookie.value
+
     return cookie_dict
 
 
@@ -763,7 +767,6 @@ def should_bypass_proxies(url, no_proxy):
 
     :rtype: bool
     """
-
     # Prioritize lowercase environment variables over uppercase
     # to keep a consistent behaviour with other http projects (curl, wget).
     def get_proxy(key):
@@ -859,7 +862,7 @@ def select_proxy(url, proxies):
 def resolve_proxies(request, proxies, trust_env=True):
     """This method takes proxy information from a request and configuration
     input to resolve a mapping of target proxies. This will consider settings
-    such as NO_PROXY to strip proxy configurations.
+    such a NO_PROXY to strip proxy configurations.
 
     :param request: Request or PreparedRequest
     :param proxies: A dictionary of schemes or schemes and hosts to proxy URLs
@@ -1051,7 +1054,7 @@ def _validate_header_part(header, header_part, header_validator_index):
     if not validator.match(header_part):
         header_kind = "name" if header_validator_index == 0 else "value"
         raise InvalidHeader(
-            f"Invalid leading whitespace, reserved character(s), or return "
+            f"Invalid leading whitespace, reserved character(s), or return"
             f"character(s) in header {header_kind}: {header_part!r}"
         )
 
