@@ -52,6 +52,8 @@ class Bluepipe:
     __access_id = ""
     __access_key = ""
 
+    __req_timeout = 10
+
     # 正在运行的instances
     __instances = []
 
@@ -62,7 +64,7 @@ class Bluepipe:
 
     def shutdown(self):
         for x in self.__instances:
-            self.kill(x)
+            self.kill_instance(x)
 
     def wait_finished(self, timeout=0):
         """
@@ -90,9 +92,15 @@ class Bluepipe:
 
     def submit(self, job_id, table, offset, done_mark):
         self.__http_call('POST', f'/job/{job_id}/start', {
-            'offset': offset,
             'tables': table,
-            'done': done_mark
+
+            # epoch of read / scan cursor
+            'offset': offset,
+
+            # epoch to determine if the data is ready
+            # 对于CDC作业来讲，commit时间必须大于此值
+            # 注意：如果来源库有异步复制（slave replicate），其复制进度也应该超过此阈值
+            'threshold': done_mark
         })
         self.__instances.append('abcd')
 
@@ -100,7 +108,7 @@ class Bluepipe:
         self.__http_call('GET', f'/instance/{instance}/status')
         return 'FINISHED'
 
-    def kill(self, instance):
+    def kill_instance(self, instance):
         self.__http_call('POST', f'/instance/{instance}/stop')
 
     def __signature(self, value):
@@ -131,8 +139,6 @@ class Bluepipe:
         req.add_header('Date', time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime()))
         req.add_header('User-Agent', __version__)
         req.add_header('Content-Type', 'application/json')
-        if payload:
-            req.add_header('Content-Length', len(payload))
 
         # headers
         # Content-Md5
@@ -142,12 +148,17 @@ class Bluepipe:
                 print(x)
 
         # body
+        if payload:
+            req.add_header('Content-Length', len(payload))
+            token.append('')
+            token.append(payload.decode('utf-8'))
+
         print(token)
         signature = self.__signature('\n'.join(token))
         req.add_header('Authorization', f'AKEY {self.__access_id}:{signature}')
 
         try:
-            with urlopen(req, None, 10) as resp:
+            with urlopen(req, None, self.__req_timeout) as resp:
                 print(resp)
             return None
         except URLError as error:
