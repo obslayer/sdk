@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
         resp = __client.submit(config.get('job'), config.get('table'),
                                offset, offset + 86460)
-        if not resp.success():
+        if not resp:
             # print log
             sys.exit(2)
 

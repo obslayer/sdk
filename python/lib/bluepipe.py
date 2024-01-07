@@ -105,8 +105,11 @@ class Bluepipe:
         """
         expire = time.time() + timeout
         while len(self.__instances) > 0:
+            print(self.__instances)
             for x in self.__instances:
                 resp = self.get_status(x)
+                print(resp)
+
                 if resp in ['FINISHED', 'KILLED', 'FAILED']:
                     try:
                         self.__instances.remove('')
@@ -134,17 +137,31 @@ class Bluepipe:
             'threshold': done_mark
         })
 
+        # [{jobId: ***, instanceId:}]
         if resp.success():
-            print(resp.data())
-            self.__instances.append('')
+            for x in (resp.data() or []):
+                if x and job_id == x.get('jobId', ''):
+                    id = x.get('instanceId', '')
+                    if id and len(id) > 0:
+                        self.__instances.append(id)
 
-        return resp
+            return resp.data()
+
+        return None
 
     def get_status(self, instance):
-        return self.__http_call('GET', f'/instance/{instance}/status')
+        resp = self.__http_call('GET', f'/instance/{instance}/status')
+        if resp.success():
+            return resp.data()
+
+        return None
 
     def kill_instance(self, instance):
-        return self.__http_call('POST', f'/instance/{instance}/stop')
+        resp = self.__http_call('POST', f'/instance/{instance}/stop')
+        if resp.success():
+            return resp.data()
+
+        return None
 
     def __signature(self, value):
         token = hmac.new(self.__access_key.encode('utf-8'), value.encode('utf-8'), sha1)
