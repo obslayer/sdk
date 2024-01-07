@@ -2,12 +2,8 @@ name: "release"
 
 on:
   push:
-    branches:
-      - main
     tags:
       - v*
-env:
-  RELEASE_NAME: ${{ github.ref_name }}
 
 jobs:
   pre-release:
@@ -28,23 +24,11 @@ jobs:
           python -m pip install --upgrade pip
 
       - name: Tag Release
-        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           automatic_release_tag: "latest"
           prerelease: false
-          title: ${{ env.RELEASE_NAME }}
-          files: |
-            *.tar.gz
-
-      - name: Nightly Build
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        uses: marvinpinto/action-automatic-releases@latest
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          automatic_release_tag: "nightly"
-          prerelease: true
-          title: Nightly Build (${{ env.RELEASE_NAME }})
+          title: ${{ github.ref_name }}
           files: |
             *.tar.gz
