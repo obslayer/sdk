@@ -7,8 +7,6 @@
 2. 命令级入参 job、table（业务参数）和date（调度参数）
 3. 监听SIGTERM和SIGINT杀作业，否则等待作业完成(0/非零)
 
-待办：
-1. 日志怎么打印？
 """
 
 import argparse
@@ -75,7 +73,6 @@ if __name__ == "__main__":
         if not __client.wait_finished(0):
             sys.exit(3)
 
-    except Exception as error:
-        logging.critical('%s', error)
+    except (argparse.ArgumentError, argparse.ArgumentTypeError):
         parser.print_usage()
         sys.exit(1)

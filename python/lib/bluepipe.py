@@ -8,7 +8,8 @@ import time
 from hashlib import sha1
 from os.path import join, dirname
 from sys import argv
-from vendors import requests
+from urllib.parse import urlparse, parse_qs, quote_plus
+from vendors import requests as http
 
 __version__ = 'cli-py/0.1.0'
 
@@ -49,7 +50,7 @@ def from_config_file():
 
 
 class Response:
-    def __init__(self, resp: requests.Response):
+    def __init__(self, resp: http.Response):
         self.__code = resp.status_code
         self.__message = resp.reason
 
@@ -168,12 +169,24 @@ class Bluepipe:
         token = hmac.new(self.__access_key.encode('utf-8'), value.encode('utf-8'), sha1)
         return base64.b64encode(token.digest()).decode('utf-8').rstrip('\n')
 
-    def __http_call(self, method, prefix, payload=None):
+    @staticmethod
+    def __encode_qs(value):
+        output = []
+        if value:
+            for k, v in value.items():
+                output.append(quote_plus(k) + '=' + quote_plus(v))
+            output.sort()
 
-        queries = {
-            'SignatureNonce': time.time(),
-        }
+        return '&'.join(output)
 
+    def __http_call(self, method, address, payload=None):
+
+        cleaned = urlparse(address)
+
+        queries = parse_qs(cleaned.query)
+        queries['SignatureNonce'] = str(time.time())
+
+        address = cleaned.path + '?' + self.__encode_qs(queries)
         headers = {
             'Date': time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime()),
             'User-Agent': __version__,
@@ -186,12 +199,12 @@ class Bluepipe:
 
         token = []
         for key, value in headers.items():
-            key = key.lower()
+            key = key.lower().strip()
             if 'date' == key or key.startswith('x-'):
-                token.append(f'{key}:{value}')
+                token.append(key + ':' + value.strip())
 
         token.sort()
-        token = [f'{method} {prefix}'] + token
+        token = [method + ' ' + address] + token
         if payload:
             token.append('')
             token.append(payload.decode('utf-8'))
@@ -199,10 +212,10 @@ class Bluepipe:
         signature = self.__signature('\n'.join(token))
         headers['Authorization'] = f'AKEY {self.__access_id}:{signature}'
 
-        resp = requests.request(method, self.__endpoint + prefix,
-                                params=queries,
-                                data=payload,
-                                headers=headers,
-                                timeout=self.__req_timeout,
-                                )
+        resp = http.request(method, self.__endpoint + address,
+                            params={},
+                            data=payload,
+                            headers=headers,
+                            timeout=self.__req_timeout,
+                            )
         return Response(resp)
