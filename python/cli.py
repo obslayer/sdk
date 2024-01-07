@@ -9,6 +9,15 @@ from lib import bluepipe
 
 __client = bluepipe.from_config_file()
 
+"""
+注意这里的‘${dt}’, 会被自动替换成日期，格式为YYYYMMDD, 如20231228.
+这个日期的逻辑为：
+● 我们配置了每天0点10分调度，比如12月28日的0点10分会生成一个实例
+● 因为数据偏移量为0, 所以2月28日0点10分生成实例的数据时间为2月28日0点0分， 如果偏移量为-1, 那么2月28日0点10分生成实例的数据时间为2月27日0点0分
+● ‘${dt}‘的值等于数据时间
+● ‘${dt}‘支持表达式，如‘${dt-1d}‘
+"""
+
 
 def print_usage():
     print(f'Usage: {sys.argv[0]} -j <job> -t <table> -c <cursor> -d <done>')
@@ -55,7 +64,7 @@ if __name__ == "__main__":
 
     try:
         command = parse_command(sys.argv[1:])
-        if not ('job' in command) or not ('table' in command):
+        if ('job' not in command) or ('table' not in command):
             print_usage()
 
         __client.submit(command.get('job'),

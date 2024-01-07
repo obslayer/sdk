@@ -21,7 +21,7 @@ def __load_config():
 
     for filename in search_paths:
         try:
-            with open(filename) as config:
+            with open(filename, 'r', encoding='utf-8') as config:
                 output = {}
                 for x in config.read().strip().splitlines():
                     if not x.startswith('#'):
@@ -45,16 +45,16 @@ def from_config_file():
 
 class Bluepipe:
     __endpoint = ""
-    __accessId = ""
-    __accessKey = ""
+    __access_id = ""
+    __access_key = ""
 
     # 正在运行的instances
     __instances = []
 
     def __init__(self, endpoint, accessId, accessKey):
         self.__endpoint = endpoint.rstrip().rstrip('/')
-        self.__accessId = accessId
-        self.__accessKey = accessKey
+        self.__access_id = accessId
+        self.__access_key = accessKey
 
     def shutdown(self):
         for x in self.__instances:
@@ -80,7 +80,7 @@ class Bluepipe:
         return True
 
     def submit(self, job_id, table, offset, done_mark):
-        self.__http_call('POST', '/job/{}/start'.format(job_id), {
+        self.__http_call('POST', f'/job/%s/start'.format(job_id), {
             'offset': offset,
             'tables': table,
             'done': done_mark
@@ -88,14 +88,14 @@ class Bluepipe:
         self.__instances.append('abcd')
 
     def get_status(self, instance):
-        self.__http_call('GET', '/instance/{}/status'.format(instance))
+        self.__http_call('GET', f'/instance/%s/status'.format(instance))
         return 'FINISHED'
 
     def kill(self, instance):
-        self.__http_call('POST', '/instance/{}/stop'.format(instance))
+        self.__http_call('POST', f'/instance/%s/stop'.format(instance))
 
     def __signature(self, value):
-        token = hmac.new(self.__accessKey.encode('utf-8'), value.encode('utf-8'), sha1)
+        token = hmac.new(self.__access_key.encode('utf-8'), value.encode('utf-8'), sha1)
         return base64.b64encode(token.digest()).decode('utf-8').rstrip('\n')
 
     def __http_call(self, method, prefix, payload=None):
@@ -104,9 +104,9 @@ class Bluepipe:
             payload = json.dumps(payload).encode('utf-8')
 
         # TODO: nonce防止回放攻击
-        queries = {
-            'Nonce': time.time(),
-        }
+        # queries = {
+        #    'Nonce': time.time(),
+        # }
 
         req = Request(
             self.__endpoint + prefix,
@@ -125,12 +125,13 @@ class Bluepipe:
             req.add_header('Content-Length', len(payload))
 
         req.add_header('Authorization', 'AKEY {}:{}'.format(
-            self.__accessId, self.__signature('')))
+            self.__access_id, self.__signature('')))
         print(req.headers)
 
         try:
             resp = urlopen(req, None, 10)
             print(resp)
+            return None
         except URLError as error:
             print(error)
             return None
