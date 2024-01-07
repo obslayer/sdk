@@ -7,7 +7,8 @@ import time
 from hashlib import sha1
 from os.path import join, dirname
 from sys import argv
-from urllib.request import Request, urlopen, URLError
+
+from vendors import requests
 
 __version__ = 'cli-py/0.1.0'
 
@@ -45,6 +46,36 @@ def from_config_file():
         config.get('accessId', ''),
         config.get('accessKey', '')
     )
+
+
+class Response:
+    def __init__(self, resp: requests.Response):
+        self.__code = resp.status_code
+        self.__message = resp.reason
+
+        if resp.status_code < 400:
+            data = resp.json()
+            self.__code = data.get('code', self.__code)
+            self.__message = data['message']
+            self.__success = data['success']
+            self.__data = data['data']
+
+    __success = False
+    __message = ""
+    __code = 0
+    __data = None
+
+    def success(self):
+        return self.__success
+
+    def code(self):
+        return self.__code
+
+    def message(self):
+        return self.__message
+
+    def data(self):
+        return self.__data
 
 
 class Bluepipe:
@@ -91,7 +122,7 @@ class Bluepipe:
         return True
 
     def submit(self, job_id, table, offset, done_mark):
-        self.__http_call('POST', f'/job/{job_id}/start', {
+        resp = self.__http_call('POST', f'/job/{job_id}/start', {
             'tables': table,
 
             # epoch of read / scan cursor
@@ -102,14 +133,18 @@ class Bluepipe:
             # 注意：如果来源库有异步复制（slave replicate），其复制进度也应该超过此阈值
             'threshold': done_mark
         })
-        self.__instances.append('abcd')
+
+        if resp.success():
+            print(resp.data())
+            self.__instances.append('')
+
+        return resp
 
     def get_status(self, instance):
-        self.__http_call('GET', f'/instance/{instance}/status')
-        return 'FINISHED'
+        return self.__http_call('GET', f'/instance/{instance}/status')
 
     def kill_instance(self, instance):
-        self.__http_call('POST', f'/instance/{instance}/stop')
+        return self.__http_call('POST', f'/instance/{instance}/stop')
 
     def __signature(self, value):
         token = hmac.new(self.__access_key.encode('utf-8'), value.encode('utf-8'), sha1)
@@ -117,50 +152,39 @@ class Bluepipe:
 
     def __http_call(self, method, prefix, payload=None):
 
+        queries = {
+            'SignatureNonce': time.time(),
+        }
+
+        headers = {
+            'Date': time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime()),
+            'User-Agent': __version__,
+            'Content-Type': 'application/json'
+        }
+
         if payload:
             payload = json.dumps(payload).encode('utf-8')
+            headers['Content-Length'] = str(len(payload))
 
-        # queries = {
-        #    'Nonce': time.time(),
-        # }
+        token = []
+        for key, value in headers.items():
+            key = key.lower()
+            if 'date' == key or key.startswith('x-'):
+                token.append(f'{key}:{value}')
 
-        # GET /aaa?Nonce=...
-        token = [f'{method} {prefix}']
-        req = Request(
-            self.__endpoint + prefix,
-            payload,
-            {},
-            None,
-            False,
-            method
-        )
-
-        # -- Sun, 22 Nov 2015 08:16:38 GMT
-        req.add_header('Date', time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime()))
-        req.add_header('User-Agent', __version__)
-        req.add_header('Content-Type', 'application/json')
-
-        # headers
-        # Content-Md5
-        token.append(req.headers.get('Date'))
-        for x in req.headers:
-            if x.startswith('X-'):
-                print(x)
-
-        # body
+        token.sort()
+        token = [f'{method} {prefix}'] + token
         if payload:
-            req.add_header('Content-Length', len(payload))
             token.append('')
             token.append(payload.decode('utf-8'))
 
-        print(token)
         signature = self.__signature('\n'.join(token))
-        req.add_header('Authorization', f'AKEY {self.__access_id}:{signature}')
+        headers['Authorization'] = f'AKEY {self.__access_id}:{signature}'
 
-        try:
-            with urlopen(req, None, self.__req_timeout) as resp:
-                print(resp)
-            return None
-        except URLError as error:
-            print(error)
-            return None
+        resp = requests.request(method, self.__endpoint + prefix,
+                                params=queries,
+                                data=payload,
+                                headers=headers,
+                                timeout=self.__req_timeout,
+                                )
+        return Response(resp)

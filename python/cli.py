@@ -58,14 +58,17 @@ if __name__ == "__main__":
         config = vars(parser.parse_args())
         offset = to_unix_epoch(config.get('date'))
 
-        __client.submit(config.get('job'), config.get('table'),
-                        offset, offset + 86460)
+        resp = __client.submit(config.get('job'), config.get('table'),
+                               offset, offset + 86460)
+        if not resp.success():
+            # print log
+            sys.exit(2)
 
         signal.signal(signal.SIGTERM, signal_handler)
         signal.signal(signal.SIGINT, signal_handler)
 
         if not __client.wait_finished(0):
-            sys.exit(2)
+            sys.exit(3)
 
     except Exception as error:
         print(error)
