@@ -20,7 +20,7 @@ __client = bluepipe.from_config_file()
 
 
 def print_usage():
-    print(f'Usage: {sys.argv[0]} -j <job> -t <table> -c <cursor> -d <done>')
+    print(f'Usage: {sys.argv[0]} -j <job> -t <table> -d <date>')
     sys.exit(1)
 
 
@@ -28,7 +28,7 @@ def signal_handler(signum, frame):
     signame = signal.Signals(signum).name
     print(f'Got signal {signame} ({signum}), killing instances ...')
     __client.shutdown()
-    sys.exit(0)
+    sys.exit(128 + signum)
 
 
 # TODO: 根据调度系统传入的参数转换

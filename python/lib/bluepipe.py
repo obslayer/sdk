@@ -13,6 +13,10 @@ __version__ = 'cli-py/0.1.0'
 
 
 def __load_config():
+    """
+    尝试加载配置文件
+    :return:
+    """
     search_paths = [
         join(dirname(argv[0]), 'bluepipe.conf'),
         '/etc/bluepipe.conf',
@@ -51,10 +55,10 @@ class Bluepipe:
     # 正在运行的instances
     __instances = []
 
-    def __init__(self, endpoint, accessId, accessKey):
+    def __init__(self, endpoint, access_id, access_key):
         self.__endpoint = endpoint.rstrip().rstrip('/')
-        self.__access_id = accessId
-        self.__access_key = accessKey
+        self.__access_id = access_id
+        self.__access_key = access_key
 
     def shutdown(self):
         for x in self.__instances:
@@ -80,7 +84,7 @@ class Bluepipe:
         return True
 
     def submit(self, job_id, table, offset, done_mark):
-        self.__http_call('POST', f'/job/%s/start'.format(job_id), {
+        self.__http_call('POST', f'/job/{job_id}/start', {
             'offset': offset,
             'tables': table,
             'done': done_mark
@@ -88,11 +92,11 @@ class Bluepipe:
         self.__instances.append('abcd')
 
     def get_status(self, instance):
-        self.__http_call('GET', f'/instance/%s/status'.format(instance))
+        self.__http_call('GET', f'/instance/{instance}/status')
         return 'FINISHED'
 
     def kill(self, instance):
-        self.__http_call('POST', f'/instance/%s/stop'.format(instance))
+        self.__http_call('POST', f'/instance/{instance}/stop')
 
     def __signature(self, value):
         token = hmac.new(self.__access_key.encode('utf-8'), value.encode('utf-8'), sha1)
@@ -103,11 +107,12 @@ class Bluepipe:
         if payload:
             payload = json.dumps(payload).encode('utf-8')
 
-        # TODO: nonce防止回放攻击
         # queries = {
         #    'Nonce': time.time(),
         # }
 
+        # GET /aaa?Nonce=...
+        token = [f'{method} {prefix}']
         req = Request(
             self.__endpoint + prefix,
             payload,
@@ -124,13 +129,21 @@ class Bluepipe:
         if payload:
             req.add_header('Content-Length', len(payload))
 
-        req.add_header('Authorization', 'AKEY {}:{}'.format(
-            self.__access_id, self.__signature('')))
-        print(req.headers)
+        # headers
+        # Content-Md5
+        token.append(req.headers.get('Date'))
+        for x in req.headers:
+            if x.startswith('X-'):
+                print(x)
+
+        # body
+        print(token)
+        signature = self.__signature('\n'.join(token))
+        req.add_header('Authorization', f'AKEY {self.__access_id}:{signature}')
 
         try:
-            resp = urlopen(req, None, 10)
-            print(resp)
+            with urlopen(req, None, 10) as resp:
+                print(resp)
             return None
         except URLError as error:
             print(error)
