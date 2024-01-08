@@ -96,9 +96,9 @@ class Bluepipe:
         self.__access_id = access_id
         self.__access_key = access_key
 
-    def shutdown(self):
+    def shutdown(self, message=None):
         for x in self.__instances:
-            self.kill_instance(x)
+            self.kill_instance(x, message)
 
     def wait_finished(self, timeout=0):
         """
@@ -159,9 +159,11 @@ class Bluepipe:
 
         return None
 
-    def kill_instance(self, instance):
+    def kill_instance(self, instance, message=None):
         instance = quote_plus(instance)
-        resp = self.__http_call('POST', f'/instance/{instance}/stop')
+        resp = self.__http_call('POST', f'/instance/{instance}/stop', {
+            'message': message
+        })
         if resp.success():
             return resp.data()
 
