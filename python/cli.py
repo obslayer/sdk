@@ -28,7 +28,7 @@ logging.basicConfig(
 def signal_handler(signum, frame):
     signame = signal.Signals(signum).name
     logging.critical('Got signal %s (%d), killing instances ...', signame, signum)
-    __client.shutdown()
+    __client.shutdown(f'signal {signame} ({signum})')
     sys.exit(128 + signum)
 
 
