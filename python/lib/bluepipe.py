@@ -13,7 +13,7 @@ from urllib.parse import urlparse, parse_qs, quote_plus
 
 from vendors import requests as http
 
-__version__ = 'cli-py/0.1.0'
+__version__ = 'cli-py/0.1.1'
 
 
 def __load_config():
