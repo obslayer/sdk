@@ -126,7 +126,7 @@ class Bluepipe:
 
     def submit(self, job_id, table, cursor_value_in_ms: int, timely_threshold: int):
         resp = self.__http_call('POST', f'/job/{job_id}/start', {
-            'tables': table,
+            'tables': str(table).replace(".", "/"),
 
             # 以毫秒计, 如果未配置游标列，则不参与过滤
             'offset': cursor_value_in_ms,
