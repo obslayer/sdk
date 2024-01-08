@@ -4,6 +4,7 @@ import base64
 import hmac
 import json
 import logging
+import secrets
 import time
 from hashlib import sha1
 from os.path import join, dirname
@@ -136,20 +137,23 @@ class Bluepipe:
         })
 
         # [{jobId: ***, instanceId:}]
-        if resp.success():
-            for x in (resp.data() or []):
-                if not x:
-                    continue
+        if not resp.success():
+            self.__logger.warning('Submit Failed: job=%s, table=%s, offset=%s, timely=%s, message=%s',
+                                  job_id, table, cursor_value_in_ms, timely_threshold, resp.message())
+            return None
 
-                instance = x.get('instanceId', '')
-                # logview = x.get('logview', '')
-                if len(instance) > 0:
-                    self.__instances.append(instance)
-                    self.__logger.info('Submit job ok, instance=%s', instance)
+        for x in (resp.data() or []):
+            if not x:
+                continue
+
+            instance = x.get('instanceId', '')
+            # logview = x.get('logview', '')
+            if len(instance) > 0:
+                self.__instances.append(instance)
+                self.__logger.info('Submit OK: job=%s, table=%s, offset=%s, timely=%s, instance=%s',
+                                   job_id, table, cursor_value_in_ms, timely_threshold, instance)
 
             return resp.data()
-
-        return None
 
     def get_status(self, instance):
         instance = quote_plus(instance)
@@ -167,28 +171,30 @@ class Bluepipe:
 
         return None
 
+    @staticmethod
+    def __normalize_url(address, extends: dict):
+
+        origin = urlparse(address)
+        params = parse_qs(origin.query)
+        for k, v in (extends or {}).items():
+            params[k.strip()] = [v.strip()]
+
+        output = []
+        for k, v in params.items():
+            output.append(quote_plus(k) + '=' + quote_plus(v.pop()))
+        output.sort()
+
+        return origin.path + '?' + '&'.join(output)
+
     def __signature(self, value):
         token = hmac.new(self.__access_key.encode('utf-8'), value.encode('utf-8'), sha1)
         return base64.b64encode(token.digest()).decode('utf-8').rstrip('\n')
 
-    @staticmethod
-    def __encode_qs(value):
-        output = []
-        if value:
-            for k, v in value.items():
-                output.append(quote_plus(k) + '=' + quote_plus(v))
-            output.sort()
-
-        return '&'.join(output)
-
     def __http_call(self, method, address, payload=None):
 
-        cleaned = urlparse(address)
-
-        queries = parse_qs(cleaned.query)
-        queries['SignatureNonce'] = str(time.time())
-
-        address = cleaned.path + '?' + self.__encode_qs(queries)
+        address = self.__normalize_url(address, {
+            'SignatureNonce': secrets.token_hex(16)
+        })
         headers = {
             'Date': time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime()),
             'User-Agent': __version__,
@@ -199,19 +205,19 @@ class Bluepipe:
             payload = json.dumps(payload).encode('utf-8')
             headers['Content-Length'] = str(len(payload))
 
-        token = []
+        context = []
         for key, value in headers.items():
             key = key.lower().strip()
             if 'date' == key or key.startswith('x-'):
-                token.append(key + ':' + value.strip())
+                context.append(key + ':' + value.strip())
 
-        token.sort()
-        token = [method + ' ' + address] + token
+        context.sort()
+        context = [method + ' ' + address] + context
         if payload:
-            token.append('')
-            token.append(payload.decode('utf-8'))
+            context.append('')
+            context.append(payload.decode('utf-8'))
 
-        signature = self.__signature('\n'.join(token))
+        signature = self.__signature('\n'.join(context))
         headers['Authorization'] = f'AKEY {self.__access_id}:{signature}'
 
         resp = http.request(method, self.__endpoint + address,

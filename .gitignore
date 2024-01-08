@@ -3,6 +3,7 @@
 .tmp
 .log
 .pyc
+.conf
 __pycache__
 logs
 data
