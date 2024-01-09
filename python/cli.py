@@ -62,7 +62,12 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--table',
                         dest='table',
                         help='Full name of source table',
-                        required=True)
+                        required=False)
+
+    parser.add_argument('-f', '--file',
+                        dest='file',
+                        help='File name of table list',
+                        required=False)
 
     parser.add_argument('-d', '--date',
                         dest='date',
@@ -72,8 +77,28 @@ if __name__ == "__main__":
     try:
         config = vars(parser.parse_args())
         offset, margin = to_local_time(config.get('date'))
-        result = __client.submit(config.get('job'), config.get('table'), offset, margin)
-        if not result:
+
+        tables = []
+        if config.get('file'):
+            with open(config.get('file'), 'r', encoding='utf-8') as fd:
+                for name in fd.read().splitlines():
+                    name = name.strip()
+                    if name and not name.startswith('#'):
+                        tables.append(name)
+        else:
+            tables.append(config.get('table'))
+
+        if len(tables) < 1:
+            parser.print_usage()
+            sys.exit(1)
+
+        queued = 0
+        for table in tables:
+            result = __client.submit(config.get('job'), table, offset, margin)
+            if result:
+                queued = queued + 1
+
+        if queued < 1:
             sys.exit(2)
 
         signal.signal(signal.SIGTERM, signal_handler)
