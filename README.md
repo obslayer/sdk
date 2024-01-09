@@ -3,5 +3,5 @@
 ## Dependencies
 
 ```shell
-pip3 install requests
+python3 -m pip install --upgrade pip -r ./python/requirements.txt
 ```
