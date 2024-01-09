@@ -107,6 +107,7 @@ class Bluepipe:
         :param timeout: 最长等待时间（秒），0代表不限制
         :return: Boolean. True代表正常结束
         """
+        output = False
         expire = time.time() + timeout
         while len(self.__instances) > 0:
             for x in self.__instances:
@@ -116,13 +117,16 @@ class Bluepipe:
                 if status in ['FINISHED', 'KILLED', 'FAILED']:
                     self.__instances.remove(x)
 
+                if status in ['FINISHED']:
+                    output = True
+
             if len(self.__instances) > 0:
                 if timeout > 0 and time.time() >= expire:
                     return False
 
                 time.sleep(3)
 
-        return True
+        return output
 
     def submit(self, job_id: str, table: str, offset: time.struct_time = None, timely: time.struct_time = None):
 
