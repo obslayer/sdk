@@ -11,7 +11,7 @@ from os.path import join, dirname
 from sys import argv
 from urllib.parse import urlparse, parse_qs, quote_plus
 
-from vendors import requests as http
+import requests as http
 
 __version__ = 'cli-py/0.1.1'
 
@@ -124,25 +124,34 @@ class Bluepipe:
 
         return True
 
-    def submit(self, job_id, table, cursor_value_in_ms: int, timely_threshold: int):
-        resp = self.__http_call('POST', f'/job/{job_id}/start', {
-            'tables': str(table).replace(".", "/"),
+    def submit(self, job_id: str, table: str, offset: time.struct_time = None, timely: time.struct_time = None):
 
-            # 以毫秒计, 如果未配置游标列，则不参与过滤
-            'offset': cursor_value_in_ms,
+        payload = {
+            'tables': table.replace('.', '/'),
 
-            # 对于CDC作业来讲，commit时间必须大于此值
-            # 注意：如果来源库有异步复制（slave replicate），其复制进度也应该超过此阈值
-            'timely': timely_threshold
-        })
+            # 以毫秒计的游标值。如果未配置游标列，则不参与数据过滤
+            'offset': -1,
 
+            # 以毫秒计的完整阈值，其复制进度也应该超过此阈值
+            'timely': 0,
+        }
+        content = ['job=' + job_id, 'table=' + table]
+
+        if offset:
+            payload['offset'] = 1000 * int(time.mktime(offset))
+            content.append('offset=' + time.strftime('%Y-%m-%d %H:%M', offset))
+
+        if timely:
+            payload['timely'] = 1000 * int(time.mktime(timely))
+            content.append('timely=' + time.strftime('%Y-%m-%d %H:%M', timely))
+
+        result = self.__http_call('POST', f'/job/{job_id}/start', payload)
         # [{jobId: ***, instanceId:}]
-        if not resp.success():
-            self.__logger.warning('Submit Failed: job=%s, table=%s, offset=%s, timely=%s, message=%s',
-                                  job_id, table, cursor_value_in_ms, timely_threshold, resp.message())
+        if not result.success():
+            self.__logger.warning('Submit Failed: %s, message=%s', ', '.join(content), result.message())
             return None
 
-        for x in (resp.data() or []):
+        for x in (result.data() or []):
             if not x:
                 continue
 
@@ -150,10 +159,9 @@ class Bluepipe:
             # logview = x.get('logview', '')
             if len(instance) > 0:
                 self.__instances.append(instance)
-                self.__logger.info('Submit OK: job=%s, table=%s, offset=%s, timely=%s, instance=%s',
-                                   job_id, table, cursor_value_in_ms, timely_threshold, instance)
+                self.__logger.info('Submit OK: %s, instance=%s', ', '.join(content), instance)
 
-            return resp.data()
+            return result.data()
 
     def get_status(self, instance):
         instance = quote_plus(instance)

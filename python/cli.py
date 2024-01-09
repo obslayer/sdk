@@ -26,15 +26,29 @@ logging.basicConfig(
 
 
 def signal_handler(signum, frame):
-    signame = signal.Signals(signum).name
-    logging.critical('Got signal %s (%d), killing instances ...', signame, signum)
-    __client.shutdown(f'signal {signame} ({signum})')
+    name = signal.Signals(signum).name
+    logging.critical('Got signal %s (%d), killing instances ...', name, signum)
+    __client.shutdown(f'signal {name} ({signum})')
     sys.exit(128 + signum)
 
 
-def to_unix_epoch(value):
-    # Z
-    return int(time.strftime('%s', time.strptime(value, '%Y%m%d')))
+def to_local_time(value: str):
+    if value:
+        fmt_offset = [
+            ('%Y%m%d%H', 3660),
+            ('%Y-%m-%dT%H', 3660),
+            ('%Y%m%d', 86460),
+            ('%Y-%m-%d', 86460),
+        ]
+
+        for fmt, span in fmt_offset:
+            try:
+                t1 = time.strptime(value, fmt)
+                return t1, time.localtime(span + time.mktime(t1))
+            except ValueError:
+                continue
+
+    return None, None
 
 
 if __name__ == "__main__":
@@ -42,29 +56,24 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-j', '--job',
                         dest='job',
-                        help='bluepipe作业ID',
+                        help='Job ID from bluepipe',
                         required=True)
 
     parser.add_argument('-t', '--table',
                         dest='table',
-                        help='bluepipe来源表名',
+                        help='Full name of source table',
                         required=True)
 
     parser.add_argument('-d', '--date',
                         dest='date',
-                        # 暂时只支持daily run
                         help='数据日期，以本地时间YYYYMMDD表示',
-                        required=False,
-                        default=time.strftime('%Y%m%d', time.localtime(time.time() - 86400))
-                        )
+                        required=False)
 
     try:
         config = vars(parser.parse_args())
-        offset = 1000 * to_unix_epoch(config.get('date'))
-
-        resp = __client.submit(config.get('job'), config.get('table'),
-                               offset, offset + 86460000)
-        if not resp:
+        offset, margin = to_local_time(config.get('date'))
+        result = __client.submit(config.get('job'), config.get('table'), offset, margin)
+        if not result:
             sys.exit(2)
 
         signal.signal(signal.SIGTERM, signal_handler)
