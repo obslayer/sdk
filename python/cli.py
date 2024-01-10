@@ -14,10 +14,12 @@ import logging
 import signal
 import sys
 import time
+from os.path import abspath, dirname
 
 from lib import bluepipe
 
-__client = bluepipe.from_config_file()
+__client = bluepipe.from_config_file(
+    dirname(abspath(sys.argv[0])))
 
 logging.basicConfig(
     level=logging.INFO,

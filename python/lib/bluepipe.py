@@ -7,8 +7,7 @@ import logging
 import secrets
 import time
 from hashlib import sha1
-from os.path import join, dirname
-from sys import argv
+from os.path import join
 from urllib.parse import urlparse, parse_qs, quote_plus
 
 import requests as http
@@ -16,18 +15,19 @@ import requests as http
 __version__ = 'cli-py/0.1.1'
 
 
-def __load_config():
+def __load_config(app_home: str):
     """
     尝试加载配置文件
     :return:
     """
     search_paths = [
-        join(dirname(argv[0]), 'bluepipe.conf'),
+        join(app_home, 'bluepipe.conf'),
         '/etc/bluepipe.conf',
-        join(dirname(argv[0]), 'config.default.conf')
+        join(app_home, 'config.default.conf')
     ]
 
     for filename in search_paths:
+        print(filename)
         try:
             with open(filename, 'r', encoding='utf-8') as config:
                 output = {}
@@ -42,8 +42,8 @@ def __load_config():
     return {}
 
 
-def from_config_file():
-    config = __load_config()
+def from_config_file(app_home: str):
+    config = __load_config(app_home)
     return Bluepipe(
         config.get('endpoint', 'https://api.1stblue.com/api/v1'),
         config.get('accessId', ''),
