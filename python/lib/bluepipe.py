@@ -110,13 +110,14 @@ class Bluepipe:
         expire = time.time() + timeout
         while len(self.__instances) > 0:
             for x in self.__instances:
-                metric = self.get_status(x) or {}
-                status = metric.get('last_status', 'unknown').upper()
-                self.__logger.info('instance (%s) status: %s', x, status)
-                if status in ['FINISHED', 'KILLED', 'FAILED']:
+                status = self.get_status(x) or {}
+                banner = status.get('last_status', 'unknown').upper()
+                # total_rows, total_size, avg_rows_ps, avg_byte_ps
+                self.__logger.info('instance (%s) %s: %s', x, banner)
+                if banner in ['FINISHED', 'KILLED', 'FAILED']:
                     self.__instances.remove(x)
 
-                if status in ['FINISHED']:
+                if banner in ['FINISHED']:
                     output = True
 
             if len(self.__instances) > 0:
