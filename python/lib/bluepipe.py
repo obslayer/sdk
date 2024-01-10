@@ -211,7 +211,7 @@ class Bluepipe:
             'Date': time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime()),
             'User-Agent': __version__,
             'Content-Type': 'application/json',
-            'X-CA-KEY': self.__access_key,
+            'X-CA-Key': self.__access_key,
             'X-CA-Nonce': secrets.token_hex(16),
         }
 
