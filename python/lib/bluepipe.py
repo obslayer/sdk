@@ -148,7 +148,7 @@ class Bluepipe:
             payload['timely'] = 1000 * int(time.mktime(timely))
             content.append('timely=' + time.strftime('%Y-%m-%d %H:%M', timely))
 
-        result = self.__http_call('POST', f'/job/{job_id}/start', payload)
+        result = self.__http_call('POST', f'/job/{job_id}/start', None, payload)
         # [{jobId: ***, instanceId:}]
         if not result.success():
             self.__logger.warning('Submit Failed: %s, message=%s', ', '.join(content), result.message())
@@ -176,7 +176,7 @@ class Bluepipe:
 
     def kill_instance(self, instance, message=None):
         instance = quote_plus(instance)
-        resp = self.__http_call('POST', f'/instance/{instance}/stop', {
+        resp = self.__http_call('POST', f'/instance/{instance}/stop', None, {
             'message': message
         })
         if resp.success():
@@ -203,15 +203,16 @@ class Bluepipe:
         token = hmac.new(self.__access_key.encode('utf-8'), value.encode('utf-8'), sha1)
         return base64.b64encode(token.digest()).decode('utf-8').rstrip('\n')
 
-    def __http_call(self, method, address, payload=None):
+    def __http_call(self, method, address, queries=None, payload=None):
 
-        address = self.__normalize_url(address, {
-            'SignatureNonce': secrets.token_hex(16)
-        })
+        address = self.__normalize_url(address, queries)
         headers = {
+            'Accept': 'application/json',
             'Date': time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime()),
             'User-Agent': __version__,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-CA-KEY': self.__access_key,
+            'X-CA-Nonce': secrets.token_hex(16),
         }
 
         if payload:
@@ -231,12 +232,12 @@ class Bluepipe:
             context.append(payload.decode('utf-8'))
 
         signature = self.__signature('\n'.join(context))
-        headers['Authorization'] = f'AKEY {self.__access_id}:{signature}'
+        headers['Authorization'] = 'AKEY ' + signature
 
-        resp = http.request(method, self.__endpoint + address,
-                            params={},
-                            data=payload,
-                            headers=headers,
-                            timeout=self.__req_timeout,
-                            )
-        return Response(resp)
+        return Response(http.request(
+            method, self.__endpoint + address,
+            params={},
+            data=payload,
+            headers=headers,
+            timeout=self.__req_timeout,
+        ))

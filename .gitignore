@@ -1,9 +1,9 @@
 .*
-.swp
-.tmp
-.log
-.pyc
-.conf
+*.swp
+*.tmp
+*.log
+*.pyc
+*.conf
 __pycache__
 logs
 data
