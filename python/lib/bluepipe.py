@@ -112,8 +112,17 @@ class Bluepipe:
             for x in self.__instances:
                 status = self.get_status(x) or {}
                 banner = status.get('last_status', 'unknown').upper()
+
+                detail = ""
+                writen = status.get('total_rows', -1)
+                if writen > -1:
+                    detail = f': rows={writen}'
+                    if status.get('avg_byte_ps', -1) > -1:
+                        speed = round(int(status.get('avg_byte_ps')) / 1048576, 2)
+                        detail = f'{detail}, {speed} MB/s'
+
                 # total_rows, total_size, avg_rows_ps, avg_byte_ps
-                self.__logger.info('instance (%s) %s: %s', x, banner)
+                self.__logger.info('instance (%s) %s%s', x, banner, detail)
                 if banner in ['FINISHED', 'KILLED', 'FAILED']:
                     self.__instances.remove(x)
 
@@ -134,7 +143,7 @@ class Bluepipe:
             'tables': table.replace('.', '/'),
 
             # 以毫秒计的游标值。如果未配置游标列，则不参与数据过滤
-            'offset': -1,
+            'offset': 0,
 
             # 以毫秒计的完整阈值，其复制进度也应该超过此阈值
             'timely': 0,
