@@ -27,7 +27,6 @@ def __load_config(app_home: str):
     ]
 
     for filename in search_paths:
-        print(filename)
         try:
             with open(filename, 'r', encoding='utf-8') as config:
                 output = {}
