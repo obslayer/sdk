@@ -15,7 +15,7 @@ import requests as http
 __version__ = 'cli-py/0.1.1'
 
 
-def __load_config(app_home: str):
+def __load_config(app_home: str) -> dict:
     """
     尝试加载配置文件
     :return:
@@ -41,15 +41,6 @@ def __load_config(app_home: str):
     return {}
 
 
-def from_config_file(app_home: str):
-    config = __load_config(app_home)
-    return Bluepipe(
-        config.get('endpoint', 'https://api.1stblue.com/api/v1'),
-        config.get('accessId', ''),
-        config.get('accessKey', '')
-    )
-
-
 class Response:
     def __init__(self, resp: http.Response):
         self.__code = resp.status_code
@@ -67,13 +58,13 @@ class Response:
     __code = 0
     __data = None
 
-    def success(self):
+    def success(self) -> bool:
         return self.__success
 
     def code(self):
         return self.__code
 
-    def message(self):
+    def message(self) -> str:
         return self.__message
 
     def data(self):
@@ -96,11 +87,11 @@ class Bluepipe:
         self.__access_id = access_id
         self.__access_key = access_key
 
-    def shutdown(self, message=None):
+    def shutdown(self, message=None) -> None:
         for x in self.__instances:
             self.kill_instance(x, message)
 
-    def wait_finished(self, timeout=0):
+    def wait_finished(self, timeout=0) -> bool:
         """
         等待作业完成退出
         :param timeout: 最长等待时间（秒），0代表不限制
@@ -137,7 +128,9 @@ class Bluepipe:
 
         return output
 
-    def submit(self, job_id: str, table: str, offset: time.struct_time = None, timely: time.struct_time = None):
+    def submit(self, job_id: str, table: str,
+               offset: time.struct_time = None,
+               timely: time.struct_time = None) -> (dict, None):
 
         payload = {
             'tables': table.replace('.', '/'),
@@ -176,7 +169,7 @@ class Bluepipe:
 
             return result.data()
 
-    def get_status(self, instance):
+    def get_status(self, instance) -> (dict, None):
         instance = quote_plus(instance)
         resp = self.__http_call('GET', f'/instance/{instance}/status')
         if resp.success():
@@ -184,7 +177,7 @@ class Bluepipe:
 
         return None
 
-    def kill_instance(self, instance, message=None):
+    def kill_instance(self, instance, message=None) -> (dict, None):
         instance = quote_plus(instance)
         resp = self.__http_call('POST', f'/instance/{instance}/stop', None, {
             'message': message
@@ -195,7 +188,7 @@ class Bluepipe:
         return None
 
     @staticmethod
-    def __normalize_url(address, extends: dict):
+    def __normalize_url(address, extends: dict) -> str:
 
         origin = urlparse(address)
         params = parse_qs(origin.query)
@@ -209,11 +202,11 @@ class Bluepipe:
 
         return origin.path + '?' + '&'.join(output)
 
-    def __signature(self, value):
+    def __signature(self, value) -> str:
         token = hmac.new(self.__access_key.encode('utf-8'), value.encode('utf-8'), sha1)
         return base64.b64encode(token.digest()).decode('utf-8').rstrip('\n')
 
-    def __http_call(self, method, address, queries=None, payload=None):
+    def __http_call(self, method, address, queries=None, payload=None) -> Response:
 
         address = self.__normalize_url(address, queries)
         headers = {
@@ -251,3 +244,12 @@ class Bluepipe:
             headers=headers,
             timeout=self.__req_timeout,
         ))
+
+
+def from_config_file(app_home: str) -> Bluepipe:
+    config = __load_config(app_home)
+    return Bluepipe(
+        config.get('endpoint', 'https://api.1stblue.com/api/v1'),
+        config.get('accessId', ''),
+        config.get('accessKey', '')
+    )
