@@ -3,6 +3,7 @@
 *.tmp
 *.log
 *.pyc
+*.bak
 *.conf
 __pycache__
 logs

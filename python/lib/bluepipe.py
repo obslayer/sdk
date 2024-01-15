@@ -12,7 +12,7 @@ from urllib.parse import urlparse, parse_qs, quote_plus
 
 import requests as http
 
-__version__ = 'cli-py/0.1.1'
+__version__ = 'cli-py/0.1.3'
 
 
 def __load_config(app_home: str) -> dict:
@@ -235,7 +235,7 @@ class Bluepipe:
             context.append(payload.decode('utf-8'))
 
         signature = self.__signature('\n'.join(context))
-        headers['Authorization'] = 'AKEY ' + signature
+        headers['Authorization'] = 'APIKEY ' + signature
 
         return Response(http.request(
             method, self.__endpoint + address,
