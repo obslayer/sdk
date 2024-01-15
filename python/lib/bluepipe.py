@@ -83,7 +83,7 @@ class Bluepipe:
     __instances = []
 
     def __init__(self, endpoint, access_id, access_key):
-        self.__endpoint = endpoint.rstrip().rstrip('/')
+        self.__endpoint = endpoint.strip().rstrip('/')
         self.__access_id = access_id
         self.__access_key = access_key
 
@@ -198,6 +198,10 @@ class Bluepipe:
         output = []
         for k, v in params.items():
             output.append(quote_plus(k) + '=' + quote_plus(v.pop()))
+
+        if len(output) < 1:
+            return origin.path
+
         output.sort()
 
         return origin.path + '?' + '&'.join(output)
@@ -214,7 +218,7 @@ class Bluepipe:
             'Date': time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime()),
             'User-Agent': __version__,
             'Content-Type': 'application/json',
-            'X-CA-Key': self.__access_key,
+            'X-CA-Key': self.__access_id,
             'X-CA-Nonce': secrets.token_hex(16),
         }
 
