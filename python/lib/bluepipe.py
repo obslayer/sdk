@@ -163,7 +163,7 @@ class Bluepipe:
 
             instance = x.get('instanceId', '')
             # logview = x.get('logview', '')
-            if len(instance) > 0:
+            if instance and len(instance) > 0:
                 self.__instances.append(instance)
                 self.__logger.info('Submit OK: %s, instance=%s', ', '.join(content), instance)
 
