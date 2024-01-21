@@ -72,7 +72,8 @@ class Response:
 
 
 class Bluepipe:
-    __endpoint = ""
+    __address = ""
+    __prefix = ""
     __access_id = ""
     __access_key = ""
 
@@ -83,7 +84,9 @@ class Bluepipe:
     __instances = []
 
     def __init__(self, endpoint, access_id, access_key):
-        self.__endpoint = endpoint.strip().rstrip('/')
+        addr = urlparse(endpoint.strip())
+        self.__address = addr.scheme + "://" + addr.netloc
+        self.__prefix = addr.path.rstrip('/')
         self.__access_id = access_id
         self.__access_key = access_key
 
@@ -187,10 +190,10 @@ class Bluepipe:
 
         return None
 
-    @staticmethod
-    def __normalize_url(address, extends: dict) -> str:
+    def __normalize_url(self, address, extends: dict) -> str:
 
         origin = urlparse(address)
+        result = self.__prefix + origin.path
         params = parse_qs(origin.query)
         for k, v in (extends or {}).items():
             params[k.strip()] = [v.strip()]
@@ -200,11 +203,11 @@ class Bluepipe:
             output.append(quote_plus(k) + '=' + quote_plus(v.pop()))
 
         if len(output) < 1:
-            return origin.path
+            return result
 
         output.sort()
 
-        return origin.path + '?' + '&'.join(output)
+        return result + '?' + '&'.join(output)
 
     def __signature(self, value) -> str:
         token = hmac.new(self.__access_key.encode('utf-8'), value.encode('utf-8'), sha1)
@@ -242,7 +245,7 @@ class Bluepipe:
         headers['Authorization'] = 'APIKEY ' + signature
 
         return Response(http.request(
-            method, self.__endpoint + address,
+            method, self.__address + address,
             params={},
             data=payload,
             headers=headers,
