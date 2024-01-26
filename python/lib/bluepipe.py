@@ -139,7 +139,7 @@ class Bluepipe:
             'tables': table.replace('.', '/'),
 
             # 以毫秒计的游标值。如果未配置游标列，则不参与数据过滤
-            'offset': 0,
+            'offset': -1,
 
             # 以毫秒计的完整阈值，其复制进度也应该超过此阈值
             'timely': 0,
