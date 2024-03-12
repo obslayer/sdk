@@ -12,7 +12,7 @@ from urllib.parse import urlparse, parse_qs, quote_plus
 
 import requests as http
 
-__version__ = 'cli-py/0.1.3'
+__version__ = 'cli-py/0.1.4'
 
 
 def __load_config(app_home: str) -> dict:
@@ -232,7 +232,7 @@ class Bluepipe:
         context = []
         for key, value in headers.items():
             key = key.lower().strip()
-            if 'date' == key or key.startswith('x-'):
+            if 'date' == key or key.startswith('x-api-'):
                 context.append(key + ':' + value.strip())
 
         context.sort()
@@ -256,7 +256,7 @@ class Bluepipe:
 def from_config_file(app_home: str) -> Bluepipe:
     config = __load_config(app_home)
     return Bluepipe(
-        config.get('endpoint', 'https://api.1stblue.com/api/v1'),
+        config.get('endpoint', 'https://api.1stblue.cloud/api/v1'),
         config.get('accessId', ''),
         config.get('accessKey', '')
     )
