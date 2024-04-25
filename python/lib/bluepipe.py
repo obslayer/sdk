@@ -12,7 +12,7 @@ from urllib.parse import urlparse, parse_qs, quote_plus
 
 import requests as http
 
-__version__ = 'cli-py/0.1.4'
+__version__ = 'cli-py/0.2.0'
 
 
 def __load_config(app_home: str) -> dict:
@@ -221,8 +221,8 @@ class Bluepipe:
             'Date': time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime()),
             'User-Agent': __version__,
             'Content-Type': 'application/json',
-            'X-CA-Key': self.__access_id,
-            'X-CA-Nonce': secrets.token_hex(16),
+            'X-Api-Key': self.__access_id,
+            'X-Api-Nonce': secrets.token_hex(16),
         }
 
         if payload:
