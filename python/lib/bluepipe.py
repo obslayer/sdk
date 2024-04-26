@@ -46,14 +46,25 @@ class Response:
         self.__code = resp.status_code
         self.__message = resp.reason
 
-        try:
-            data = resp.json()
-            self.__code = data.get('code', self.__code)
-            self.__message = data.get('message', self.__message)
-            self.__success = data.get('success', False)
-            self.__data = data.get('data', None)
-        except json.decoder.JSONDecodeError:
-            pass
+        data = None
+        if resp.status_code >= 300 or resp.status_code < 200:
+            self.__success = False
+        else:
+            try:
+                data = resp.json()
+            except json.JSONDecodeError:
+                pass
+
+        if data is not None:
+            code = data.get('code')
+            success = data.get('success')
+            if code is not None and success is not None:
+                self.__code = code
+                self.__success = success
+                self.__message = data.get('message', self.__message)
+                data = data.get('data')
+
+        self.__data = data
 
     __success = False
     __message = ""
