@@ -46,12 +46,14 @@ class Response:
         self.__code = resp.status_code
         self.__message = resp.reason
 
-        if resp.status_code < 400:
+        try:
             data = resp.json()
             self.__code = data.get('code', self.__code)
-            self.__message = data['message']
-            self.__success = data['success']
-            self.__data = data['data']
+            self.__message = data.get('message', self.__message)
+            self.__success = data.get('success', False)
+            self.__data = data.get('data', None)
+        except json.decoder.JSONDecodeError:
+            pass
 
     __success = False
     __message = ""
