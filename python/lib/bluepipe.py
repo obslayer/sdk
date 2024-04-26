@@ -44,7 +44,7 @@ def __load_config(app_home: str) -> dict:
 class Response:
     def __init__(self, resp: http.Response):
         self.__code = resp.status_code
-        self.__message = resp.reason
+        self.__message = resp.content or resp.reason
 
         data = None
         if resp.status_code >= 300 or resp.status_code < 200:
