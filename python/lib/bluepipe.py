@@ -183,7 +183,7 @@ class Bluepipe:
                 self.__instances.append(instance)
                 self.__logger.info('Submit OK: %s, instance=%s', ', '.join(content), instance)
 
-            return result.data()
+        return result.data()
 
     def get_status(self, instance) -> (dict, None):
         instance = quote_plus(instance)
