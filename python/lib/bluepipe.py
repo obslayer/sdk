@@ -144,6 +144,20 @@ class Bluepipe:
 
         return output
 
+    def search_lineage(self, table: str, target: str = None):
+        prefix = '/lineage/search'
+        if target:
+            prefix = f'{prefix}/{target}'
+
+        result = self.__http_call('GET', prefix, {
+            'table': table
+        })
+
+        if result.success():
+            return result.data()
+
+        return None
+
     def submit(self, job_id: str, table: str,
                offset: time.struct_time = None,
                timely: time.struct_time = None) -> (dict, None):
@@ -194,7 +208,7 @@ class Bluepipe:
 
     def get_status(self, instance) -> (dict, None):
         instance = quote_plus(instance)
-        resp = self.__http_call('GET', f'/job/instance/{instance}')
+        resp = self.__http_call('GET', f'/instance/{instance}')
         if resp.success():
             return resp.data()
 
@@ -202,7 +216,7 @@ class Bluepipe:
 
     def kill_instance(self, instance, message=None) -> (dict, None):
         instance = quote_plus(instance)
-        resp = self.__http_call('POST', f'/job/instance/{instance}/stop', None, {
+        resp = self.__http_call('POST', f'/instance/{instance}/stop', None, {
             'message': message
         })
         if resp.success():

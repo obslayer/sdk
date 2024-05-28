@@ -26,6 +26,7 @@ logging.basicConfig(
     format='[%(asctime)s] %(levelname)s: %(message)s'
 )
 
+
 def signal_handler(signum, frame):
     name = signal.Signals(signum).name
     logging.critical('Got signal %s (%d), killing instances ...', name, signum)
