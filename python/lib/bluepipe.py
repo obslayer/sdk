@@ -123,10 +123,10 @@ class Bluepipe:
                 detail = ""
                 writen = status.get('total_rows', -1)
                 if writen > -1:
-                    detail = f': rows={writen}'
-                    if status.get('avg_byte_ps', -1) > -1:
-                        speed = round(int(status.get('avg_byte_ps')) / 1048576, 2)
-                        detail = f'{detail}, {speed} MB/s'
+                    detail = ': rows=' + '{:,}'.format(writen)
+                    if status.get('byteps', -1) > -1:
+                        speed = round(int(status.get('byteps')) / 1048576, 2)
+                        detail = f'{detail}, bps={speed} MB/s'
 
                 # total_rows, total_size, avg_rows_ps, avg_byte_ps
                 self.__logger.info('instance (%s) %s%s', x, banner, detail)
@@ -148,26 +148,33 @@ class Bluepipe:
                offset: time.struct_time = None,
                timely: time.struct_time = None) -> (dict, None):
 
-        payload = {
-            'tables': table.replace('.', '/'),
-
-            # 以毫秒计的游标值。如果未配置游标列，则不参与数据过滤
-            'offset': -1,
-
-            # 以毫秒计的完整阈值，其复制进度也应该超过此阈值
-            'timely': 0,
-        }
+        table = table.replace('.', '/')
         content = ['job=' + job_id, 'table=' + table]
 
         if offset:
-            payload['offset'] = 1000 * int(time.mktime(offset))
             content.append('offset=' + time.strftime('%Y-%m-%d %H:%M', offset))
+            offset = 1000 * int(time.mktime(offset))
+        else:
+            offset = -1
 
         if timely:
-            payload['timely'] = 1000 * int(time.mktime(timely))
             content.append('timely=' + time.strftime('%Y-%m-%d %H:%M', timely))
+            timely = 1000 * int(time.mktime(timely))
+        else:
+            timely = 0
 
-        result = self.__http_call('POST', f'/job/{job_id}/start', None, payload)
+        result = self.__http_call('POST', f'/job/{job_id}/start', None, {
+            # 以毫秒记的读偏移量
+            'table_offset': {
+                table: offset,
+            },
+
+            # 以毫秒记的 check done 检查点
+            'ready_offset': {
+                table: timely,
+            },
+            'stages': ['batch']
+        })
         # [{jobId: ***, instanceId:}]
         if not result.success():
             self.__logger.warning('Submit Failed: %s, message=%s', ', '.join(content), result.message())
@@ -187,7 +194,7 @@ class Bluepipe:
 
     def get_status(self, instance) -> (dict, None):
         instance = quote_plus(instance)
-        resp = self.__http_call('GET', f'/instance/{instance}/status')
+        resp = self.__http_call('GET', f'/job/instance/{instance}')
         if resp.success():
             return resp.data()
 
@@ -195,7 +202,7 @@ class Bluepipe:
 
     def kill_instance(self, instance, message=None) -> (dict, None):
         instance = quote_plus(instance)
-        resp = self.__http_call('POST', f'/instance/{instance}/stop', None, {
+        resp = self.__http_call('POST', f'/job/instance/{instance}/stop', None, {
             'message': message
         })
         if resp.success():
