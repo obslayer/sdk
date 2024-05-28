@@ -162,9 +162,7 @@ class Bluepipe:
                offset: time.struct_time = None,
                timely: time.struct_time = None) -> (dict, None):
 
-        table = table.replace('.', '/')
         content = ['job=' + job_id, 'table=' + table]
-
         if offset:
             content.append('offset=' + time.strftime('%Y-%m-%d %H:%M', offset))
             offset = 1000 * int(time.mktime(offset))
@@ -177,6 +175,7 @@ class Bluepipe:
         else:
             timely = 0
 
+        table = table.replace('.', '/')
         result = self.__http_call('POST', f'/job/{job_id}/start', None, {
             # 以毫秒记的读偏移量
             'table_offset': {
