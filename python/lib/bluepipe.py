@@ -185,8 +185,7 @@ class BluePipe:
             # 以毫秒记的 check done 检查点
             'ready_offset': {
                 table: timely,
-            },
-            'stages': ['batch']
+            }
         })
         # [{jobId: ***, instanceId:}]
         if not result.success():
