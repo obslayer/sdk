@@ -84,7 +84,7 @@ class Response:
         return self.__data
 
 
-class Bluepipe:
+class BluePipe:
     __address = ""
     __prefix = ""
     __access_id = ""
@@ -144,7 +144,7 @@ class Bluepipe:
 
         return output
 
-    def search_lineage(self, table: str, target: str = None):
+    def search_lineage(self, table: str, target: str = None) -> (list, None):
         prefix = '/lineage/search'
         if target:
             prefix = f'{prefix}/{target}'
@@ -154,7 +154,7 @@ class Bluepipe:
         })
 
         if result.success():
-            return result.data()
+            return result.data().get('records')
 
         return None
 
@@ -286,9 +286,9 @@ class Bluepipe:
         ))
 
 
-def from_config_file(app_home: str) -> Bluepipe:
+def from_config_file(app_home: str) -> BluePipe:
     config = __load_config(app_home)
-    return Bluepipe(
+    return BluePipe(
         config.get('endpoint', 'https://api.1stblue.cloud/api/v1'),
         config.get('accessId', ''),
         config.get('accessKey', '')
