@@ -282,6 +282,7 @@ class BluePipe:
             data=payload,
             headers=headers,
             timeout=self.__req_timeout,
+            # verify=False
         ))
 
 
